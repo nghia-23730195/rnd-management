@@ -1,6 +1,15 @@
 import "dotenv/config";
+import { defineConfig } from "prisma/config";
 
-import { defineConfig, env } from "prisma/config";
+const databaseUrl =
+  process.env.DIRECT_URL ??
+  process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error(
+    "Thiếu DIRECT_URL hoặc DATABASE_URL trong biến môi trường."
+  );
+}
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -10,6 +19,6 @@ export default defineConfig({
   },
 
   datasource: {
-    url: env("DIRECT_URL"),
+    url: databaseUrl,
   },
 });
