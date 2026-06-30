@@ -12,30 +12,9 @@ import {
 } from "lucide-react";
 
 import { StatCard } from "@/components/dashboard/stat-card";
+import { prisma } from "@/lib/prisma";
 
-const recentIdeas = [
-  {
-    id: "IDEA-2026-001",
-    title: "Hệ thống cảnh báo té ngã cho người cao tuổi",
-    category: "Trí tuệ nhân tạo",
-    status: "Đang đánh giá",
-    author: "Nguyễn Văn A",
-  },
-  {
-    id: "IDEA-2026-002",
-    title: "Robot giám sát môi trường trong nhà kính",
-    category: "Robot và IoT",
-    status: "Khả thi",
-    author: "Trần Văn B",
-  },
-  {
-    id: "IDEA-2026-003",
-    title: "Tủ sạc thông minh sử dụng năng lượng tái tạo",
-    category: "Mô hình STEM",
-    status: "Bản nháp",
-    author: "Lê Thị C",
-  },
-];
+export const dynamic = "force-dynamic";
 
 const activeProjects = [
   {
@@ -55,41 +34,126 @@ const activeProjects = [
   },
 ];
 
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "Bản nháp",
+    PENDING: "Chờ đánh giá",
+    REVIEWING: "Đang đánh giá",
+    NEEDS_REVISION: "Cần chỉnh sửa",
+    FEASIBLE: "Khả thi",
+    NOT_FEASIBLE: "Không khả thi",
+    APPROVED: "Đã phê duyệt",
+    CONVERTED_TO_PROJECT: "Đã thành dự án",
+    PAUSED: "Tạm dừng",
+  };
+
+  return labels[status] ?? status;
+}
+
 function getStatusClasses(status: string) {
   switch (status) {
-    case "Khả thi":
-      return "bg-emerald-400/10 text-emerald-300";
-    case "Đang đánh giá":
+    case "PENDING":
       return "bg-amber-400/10 text-amber-300";
+
+    case "REVIEWING":
+      return "bg-blue-400/10 text-blue-300";
+
+    case "NEEDS_REVISION":
+      return "bg-orange-400/10 text-orange-300";
+
+    case "FEASIBLE":
+      return "bg-emerald-400/10 text-emerald-300";
+
+    case "NOT_FEASIBLE":
+      return "bg-red-400/10 text-red-300";
+
+    case "APPROVED":
+      return "bg-cyan-400/10 text-cyan-300";
+
+    case "CONVERTED_TO_PROJECT":
+      return "bg-purple-400/10 text-purple-300";
+
+    case "PAUSED":
+      return "bg-slate-400/10 text-slate-300";
+
+    case "DRAFT":
     default:
       return "bg-slate-700/70 text-slate-300";
   }
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [
+    totalIdeas,
+    reviewingIdeas,
+    feasibleIdeas,
+    recentIdeas,
+  ] = await Promise.all([
+    prisma.idea.count(),
+
+    prisma.idea.count({
+      where: {
+        status: {
+          in: [
+            "PENDING",
+            "REVIEWING",
+            "NEEDS_REVISION",
+          ],
+        },
+      },
+    }),
+
+    prisma.idea.count({
+      where: {
+        status: {
+          in: [
+            "FEASIBLE",
+            "APPROVED",
+            "CONVERTED_TO_PROJECT",
+          ],
+        },
+      },
+    }),
+
+    prisma.idea.findMany({
+      take: 5,
+      orderBy: {
+        updatedAt: "desc",
+      },
+      include: {
+        category: true,
+        creator: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    }),
+  ]);
+
   const stats = [
     {
       title: "Tổng ý tưởng",
-      value: "128",
-      description: "Tăng 12 ý tưởng trong tháng này",
+      value: String(totalIdeas),
+      description: "Tổng số ý tưởng trong hệ thống",
       icon: Lightbulb,
     },
     {
       title: "Đang đánh giá",
-      value: "42",
-      description: "8 ý tưởng cần xử lý trong tuần",
+      value: String(reviewingIdeas),
+      description: "Chờ đánh giá hoặc đang xử lý",
       icon: Clock3,
     },
     {
       title: "Ý tưởng khả thi",
-      value: "15",
+      value: String(feasibleIdeas),
       description: "Có thể chuyển thành dự án R&D",
       icon: CheckCircle2,
     },
     {
       title: "Dự án đang chạy",
-      value: "12",
-      description: "3 dự án sắp đến thời hạn",
+      value: "0",
+      description: "Chưa kết nối phân hệ dự án",
       icon: FolderKanban,
     },
   ];
@@ -165,45 +229,63 @@ export default function DashboardPage() {
           </div>
 
           <div className="divide-y divide-slate-800">
-            {recentIdeas.map((idea) => (
-              <article
-                key={idea.id}
-                className="flex flex-col gap-4 p-5 transition hover:bg-slate-800/30 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-cyan-400">
-                      {idea.id}
-                    </span>
+            {recentIdeas.length === 0 ? (
+              <div className="flex min-h-56 flex-col items-center justify-center p-8 text-center">
+                <Lightbulb className="size-8 text-cyan-400" />
 
-                    <span
-                      className={[
-                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                        getStatusClasses(idea.status),
-                      ].join(" ")}
+                <p className="mt-4 font-medium text-slate-200">
+                  Chưa có ý tưởng
+                </p>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  Hãy tạo ý tưởng đầu tiên cho hệ thống.
+                </p>
+              </div>
+            ) : (
+              recentIdeas.map((idea) => (
+                <article
+                  key={idea.id}
+                  className="flex flex-col gap-4 p-5 transition hover:bg-slate-800/30 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium text-cyan-400">
+                        {idea.code}
+                      </span>
+
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                          getStatusClasses(idea.status),
+                        ].join(" ")}
+                      >
+                        {getStatusLabel(idea.status)}
+                      </span>
+                    </div>
+
+                    <Link
+                      href={`/ideas/${idea.id}`}
+                      className="mt-2 block truncate font-medium text-slate-100 transition hover:text-cyan-300"
                     >
-                      {idea.status}
-                    </span>
+                      {idea.title}
+                    </Link>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      {idea.category?.name ?? "Chưa phân loại"} ·{" "}
+                      {idea.creator.name}
+                    </p>
                   </div>
 
-                  <h3 className="mt-2 truncate font-medium text-slate-100">
-                    {idea.title}
-                  </h3>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    {idea.category} · {idea.author}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  aria-label={`Tùy chọn cho ${idea.title}`}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-700 hover:text-slate-200"
-                >
-                  <MoreHorizontal className="size-5" />
-                </button>
-              </article>
-            ))}
+                  <Link
+                    href={`/ideas/${idea.id}`}
+                    aria-label={`Xem chi tiết ${idea.title}`}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-700 hover:text-slate-200"
+                  >
+                    <MoreHorizontal className="size-5" />
+                  </Link>
+                </article>
+              ))
+            )}
           </div>
         </div>
 
@@ -222,44 +304,26 @@ export default function DashboardPage() {
             <TrendingUp className="size-5 text-cyan-400" />
           </div>
 
-          <div className="space-y-6 p-5">
-            {activeProjects.map((project) => (
-              <article key={project.code}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-200">
-                      {project.name}
-                    </h3>
+          <div className="flex min-h-[267px] flex-col items-center justify-center p-6 text-center">
+            <FolderKanban className="size-9 text-cyan-400" />
 
-                    <p className="mt-1 text-xs text-slate-500">
-                      {project.code}
-                    </p>
-                  </div>
+            <p className="mt-4 font-medium text-slate-200">
+                Chưa có dự án
+            </p>
 
-                  <span className="text-sm font-semibold text-cyan-300">
-                    {project.progress}%
-                  </span>
-                </div>
-
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-cyan-400"
-                    style={{
-                      width: `${project.progress}%`,
-                    }}
-                  />
-                </div>
-              </article>
-            ))}
+            <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
+                Dự án sẽ xuất hiện tại đây sau khi một ý tưởng được phê duyệt
+                và chuyển thành dự án R&amp;D.
+            </p>
 
             <Link
-              href="/projects"
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+                href="/projects"
+                className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
             >
-              Xem toàn bộ dự án
-              <ArrowRight className="size-4" />
+                Xem phân hệ dự án
+                <ArrowRight className="size-4" />
             </Link>
-          </div>
+            </div>
         </div>
       </section>
 
