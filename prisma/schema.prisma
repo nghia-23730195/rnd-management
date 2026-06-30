@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -10,4 +5,92 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  RND_MANAGER
+  PROJECT_MANAGER
+  REVIEWER
+  MEMBER
+  VIEWER
+}
+
+enum IdeaStatus {
+  DRAFT
+  PENDING
+  REVIEWING
+  NEEDS_REVISION
+  FEASIBLE
+  NOT_FEASIBLE
+  APPROVED
+  CONVERTED_TO_PROJECT
+  PAUSED
+}
+
+enum IdeaPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String?
+  avatarUrl    String?
+  role         UserRole @default(MEMBER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ideas Idea[]
+
+  @@index([role])
+  @@index([active])
+}
+
+model IdeaCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ideas Idea[]
+}
+
+model Idea {
+  id                String       @id @default(cuid())
+  code              String       @unique
+  title             String
+  summary           String
+  problem           String?
+  proposedSolution  String?
+  novelty           String?
+  targetUsers       String?
+  expectedResult    String?
+  estimatedDuration Int?
+  estimatedBudget   Decimal?     @db.Decimal(15, 2)
+  priority          IdeaPriority @default(MEDIUM)
+  status            IdeaStatus   @default(DRAFT)
+  averageScore      Float?
+
+  creatorId  String
+  categoryId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator  User          @relation(fields: [creatorId], references: [id])
+  category IdeaCategory? @relation(fields: [categoryId], references: [id])
+
+  @@index([creatorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
 }
