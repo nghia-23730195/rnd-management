@@ -1,12 +1,19 @@
 import Link from "next/link";
+
 import {
   CalendarDays,
   Lightbulb,
   Plus,
   Search,
+  SlidersHorizontal,
   UserRound,
+  X,
 } from "lucide-react";
 
+import {
+  IdeaPriority,
+  IdeaStatus,
+} from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -263,3 +270,4 @@ export default async function IdeasPage({
     </div>
   );
 }
+
