@@ -7,11 +7,13 @@ import {
   Clock3,
   Lightbulb,
   Pencil,
+  Save,
   Target,
   UserRound,
 } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
+import { updateIdeaStatus } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +71,7 @@ type IdeaDetailPageProps = {
 
   searchParams: Promise<{
     updated?: string;
+    statusUpdated?: string;
   }>;
 };
 
@@ -134,14 +137,22 @@ export default async function IdeaDetailPage({
   if (!idea) {
     notFound();
   }
+  const updateIdeaStatusWithId =
+    updateIdeaStatus.bind(null, idea.id);
 
   return (
     <div className="mx-auto max-w-6xl">
-      {query.updated === "1" && (
-        <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-200">
-          Ý tưởng đã được cập nhật thành công.
-        </div>
-      )}
+  {query.updated === "1" && (
+    <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-200">
+      Ý tưởng đã được cập nhật thành công.
+    </div>
+  )}
+
+  {query.statusUpdated === "1" && (
+    <div className="mb-6 rounded-xl border border-blue-400/30 bg-blue-400/10 px-5 py-4 text-sm text-blue-200">
+      Trạng thái ý tưởng đã được cập nhật thành công.
+    </div>
+  )}
 
       <Link
         href="/ideas"
@@ -293,90 +304,165 @@ export default async function IdeaDetailPage({
         </div>
 
         <aside className="space-y-6">
-          <article className="rounded-2xl border border-slate-800 bg-[#111c30] p-6">
-            <h2 className="font-semibold text-slate-100">
-              Thông tin phân loại
-            </h2>
+            <article className="rounded-2xl border border-slate-800 bg-[#111c30] p-6">
+                <h2 className="font-semibold text-slate-100">
+                Quản lý trạng thái
+                </h2>
 
-            <dl className="mt-5 space-y-5">
-              <div>
-                <dt className="text-xs text-slate-500">
-                  Danh mục
-                </dt>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                Cập nhật giai đoạn xử lý hiện tại của ý tưởng.
+                </p>
 
-                <dd className="mt-2">
-                  {idea.category ? (
-                    <span
-                      className="inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
-                      style={{
-                        color:
-                          idea.category.color ?? "#94a3b8",
-                        borderColor: `${
-                          idea.category.color ?? "#64748b"
-                        }55`,
-                        backgroundColor: `${
-                          idea.category.color ?? "#64748b"
-                        }15`,
-                      }}
+                <form
+                action={updateIdeaStatusWithId}
+                className="mt-5 space-y-4"
+                >
+                <div>
+                    <label
+                    htmlFor="status"
+                    className="mb-2 block text-xs font-medium text-slate-400"
                     >
-                      {idea.category.name}
-                    </span>
-                  ) : (
-                    <EmptyValue />
-                  )}
-                </dd>
-              </div>
+                    Trạng thái hiện tại
+                    </label>
 
-              <div>
-                <dt className="text-xs text-slate-500">
-                  Đối tượng sử dụng
-                </dt>
+                    <select
+                    id="status"
+                    name="status"
+                    defaultValue={idea.status}
+                    className="h-11 w-full rounded-xl border border-slate-700 bg-[#0a1527] px-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10"
+                    >
+                    <option value="DRAFT">
+                        Bản nháp
+                    </option>
 
-                <dd className="mt-2 text-sm leading-6 text-slate-300">
-                  {idea.targetUsers || "Chưa xác định"}
-                </dd>
-              </div>
+                    <option value="PENDING">
+                        Chờ đánh giá
+                    </option>
 
-              <div>
-                <dt className="text-xs text-slate-500">
-                  Kết quả dự kiến
-                </dt>
+                    <option value="REVIEWING">
+                        Đang đánh giá
+                    </option>
 
-                <dd className="mt-2 text-sm leading-6 text-slate-300">
-                  {idea.expectedResult || "Chưa xác định"}
-                </dd>
-              </div>
-            </dl>
-          </article>
+                    <option value="NEEDS_REVISION">
+                        Cần chỉnh sửa
+                    </option>
 
-          <article className="rounded-2xl border border-slate-800 bg-[#111c30] p-6">
-            <h2 className="font-semibold text-slate-100">
-              Thông tin cập nhật
-            </h2>
+                    <option value="FEASIBLE">
+                        Khả thi
+                    </option>
 
-            <dl className="mt-5 space-y-4 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">
-                  Ngày tạo
-                </dt>
+                    <option value="NOT_FEASIBLE">
+                        Không khả thi
+                    </option>
 
-                <dd className="text-right text-slate-300">
-                  {formatDate(idea.createdAt)}
-                </dd>
-              </div>
+                    <option value="APPROVED">
+                        Đã phê duyệt
+                    </option>
 
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">
-                  Cập nhật cuối
-                </dt>
+                    <option value="CONVERTED_TO_PROJECT">
+                        Đã chuyển thành dự án
+                    </option>
 
-                <dd className="text-right text-slate-300">
-                  {formatDate(idea.updatedAt)}
-                </dd>
-              </div>
-            </dl>
-          </article>
-        </aside>
+                    <option value="PAUSED">
+                        Tạm dừng
+                    </option>
+                    </select>
+                </div>
+
+                <button
+                    type="submit"
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                >
+                    <Save className="size-4" />
+                    Cập nhật trạng thái
+                </button>
+                </form>
+            </article>
+
+            <article className="rounded-2xl border border-slate-800 bg-[#111c30] p-6">
+                <h2 className="font-semibold text-slate-100">
+                Thông tin phân loại
+                </h2>
+
+                <dl className="mt-5 space-y-5">
+                <div>
+                    <dt className="text-xs text-slate-500">
+                    Danh mục
+                    </dt>
+
+                    <dd className="mt-2">
+                    {idea.category ? (
+                        <span
+                        className="inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
+                        style={{
+                            color:
+                            idea.category.color ?? "#94a3b8",
+                            borderColor: `${
+                            idea.category.color ?? "#64748b"
+                            }55`,
+                            backgroundColor: `${
+                            idea.category.color ?? "#64748b"
+                            }15`,
+                        }}
+                        >
+                        {idea.category.name}
+                        </span>
+                    ) : (
+                        <EmptyValue />
+                    )}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt className="text-xs text-slate-500">
+                    Đối tượng sử dụng
+                    </dt>
+
+                    <dd className="mt-2 text-sm leading-6 text-slate-300">
+                    {idea.targetUsers || "Chưa xác định"}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt className="text-xs text-slate-500">
+                    Kết quả dự kiến
+                    </dt>
+
+                    <dd className="mt-2 text-sm leading-6 text-slate-300">
+                    {idea.expectedResult || "Chưa xác định"}
+                    </dd>
+                </div>
+                </dl>
+            </article>
+
+            <article className="rounded-2xl border border-slate-800 bg-[#111c30] p-6">
+                <h2 className="font-semibold text-slate-100">
+                Thông tin cập nhật
+                </h2>
+
+                <dl className="mt-5 space-y-4 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-500">
+                    Ngày tạo
+                    </dt>
+
+                    <dd className="text-right text-slate-300">
+                    {formatDate(idea.createdAt)}
+                    </dd>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                    <dt className="text-slate-500">
+                    Cập nhật cuối
+                    </dt>
+
+                    <dd className="text-right text-slate-300">
+                    {formatDate(idea.updatedAt)}
+                    </dd>
+                </div>
+                </dl>
+            </article>
+            </aside>
       </section>
     </div>
   );

@@ -142,6 +142,27 @@ async function generateIdeaCode() {
   }
 }
 
+function normalizeStatus(
+  value: FormDataEntryValue | null
+): IdeaStatus {
+  if (
+    value === IdeaStatus.DRAFT ||
+    value === IdeaStatus.PENDING ||
+    value === IdeaStatus.REVIEWING ||
+    value === IdeaStatus.NEEDS_REVISION ||
+    value === IdeaStatus.FEASIBLE ||
+    value === IdeaStatus.NOT_FEASIBLE ||
+    value === IdeaStatus.APPROVED ||
+    value === IdeaStatus.CONVERTED_TO_PROJECT ||
+    value === IdeaStatus.PAUSED
+  ) {
+    return value;
+  }
+
+  throw new Error("Trạng thái ý tưởng không hợp lệ.");
+}
+
+
 export async function createIdea(formData: FormData) {
   const title = getRequiredText(
     formData,
@@ -377,4 +398,42 @@ export async function updateIdea(
   revalidatePath("/dashboard");
 
   redirect(`/ideas/${ideaId}?updated=1`);
+}
+
+export async function updateIdeaStatus(
+  ideaId: string,
+  formData: FormData
+) {
+  const status = normalizeStatus(
+    formData.get("status")
+  );
+
+  const existingIdea = await prisma.idea.findUnique({
+    where: {
+      id: ideaId,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!existingIdea) {
+    throw new Error("Không tìm thấy ý tưởng.");
+  }
+
+  await prisma.idea.update({
+    where: {
+      id: ideaId,
+    },
+    data: {
+      status,
+    },
+  });
+
+  revalidatePath("/ideas");
+  revalidatePath(`/ideas/${ideaId}`);
+  revalidatePath("/dashboard");
+
+  redirect(`/ideas/${ideaId}?statusUpdated=1`);
 }
