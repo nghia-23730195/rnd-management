@@ -380,7 +380,7 @@ export default async function IdeasPage({
   return (
     <div className="mx-auto min-w-0 max-w-[1600px] space-y-6">
       {/* Tiêu đề */}
-      <section className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+     <section className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-medium text-cyan-400">
             Quản lý ý tưởng nghiên cứu
@@ -417,10 +417,10 @@ export default async function IdeasPage({
         <form
           action="/ideas"
           method="get"
-          className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5"
+          className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-5"
         >
           {/* Hàng tìm kiếm */}
-          <div className="relative min-w-0 md:col-span-2 xl:col-span-5">
+          <div className="relative min-w-0 md:col-span-2 lg:col-span-5">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
             <input
@@ -518,7 +518,7 @@ export default async function IdeasPage({
           {/* Nút áp dụng */}
           <button
             type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 xl:col-span-1"
+           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 lg:col-span-1"
           >
             <SlidersHorizontal className="size-4" />
             Áp dụng
@@ -726,8 +726,8 @@ export default async function IdeasPage({
       )}
 
       {/* Thống kê cuối trang */}
-      <section className="grid overflow-hidden rounded-2xl border border-slate-800 bg-[#111c30] sm:grid-cols-2 xl:grid-cols-4">
-        <div className="border-b border-slate-800 p-5 sm:border-r xl:border-b-0">
+      <section className="grid overflow-hidden rounded-2xl border border-slate-800 bg-[#111c30] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="border-b border-slate-800 p-5 sm:border-r lg:border-b-0">
           <div className="flex items-center gap-3">
             <Lightbulb className="size-5 text-cyan-400" />
 
@@ -743,7 +743,7 @@ export default async function IdeasPage({
           </div>
         </div>
 
-        <div className="border-b border-slate-800 p-5 xl:border-b-0 xl:border-r">
+        <div className="border-b border-slate-800 p-5 xl:border-b-0 lg:border-r">
           <div className="flex items-center gap-3">
             <Clock3 className="size-5 text-amber-300" />
 
