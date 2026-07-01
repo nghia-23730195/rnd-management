@@ -417,9 +417,10 @@ export default async function IdeasPage({
         <form
           action="/ideas"
           method="get"
-          className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(260px,2fr)_repeat(4,minmax(145px,1fr))_120px]"
+          className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5"
         >
-          <div className="relative min-w-0 md:col-span-2 xl:col-span-3 2xl:col-span-1">
+          {/* Hàng tìm kiếm */}
+          <div className="relative min-w-0 md:col-span-2 xl:col-span-5">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
             <input
@@ -431,6 +432,7 @@ export default async function IdeasPage({
             />
           </div>
 
+          {/* Trạng thái */}
           <select
             name="status"
             defaultValue={selectedStatus ?? ""}
@@ -456,6 +458,7 @@ export default async function IdeasPage({
             <option value="PAUSED">Tạm dừng</option>
           </select>
 
+          {/* Danh mục */}
           <select
             name="category"
             defaultValue={selectedCategory}
@@ -473,6 +476,7 @@ export default async function IdeasPage({
             ))}
           </select>
 
+          {/* Ưu tiên */}
           <select
             name="priority"
             defaultValue={selectedPriority ?? ""}
@@ -485,6 +489,7 @@ export default async function IdeasPage({
             <option value="URGENT">Khẩn cấp</option>
           </select>
 
+          {/* Sắp xếp */}
           <select
             name="sort"
             defaultValue={selectedSort}
@@ -510,9 +515,10 @@ export default async function IdeasPage({
             </option>
           </select>
 
+          {/* Nút áp dụng */}
           <button
             type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 xl:col-span-3 2xl:col-span-1"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 xl:col-span-1"
           >
             <SlidersHorizontal className="size-4" />
             Áp dụng
@@ -579,7 +585,7 @@ export default async function IdeasPage({
         })}
       </section>
 
-      {/* Danh sách ý tưởng */}
+      {/* Không có kết quả */}
       {ideas.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-slate-700 bg-[#111c30] px-6 py-16 text-center">
           <Search className="mx-auto size-10 text-slate-600" />
@@ -600,6 +606,7 @@ export default async function IdeasPage({
           </Link>
         </section>
       ) : (
+        /* Danh sách ý tưởng */
         <section className="grid min-w-0 gap-5 md:grid-cols-2 2xl:grid-cols-3">
           {ideas.map((idea) => (
             <article
@@ -692,7 +699,7 @@ export default async function IdeasPage({
             </article>
           ))}
 
-          {/* Card tạo ý tưởng */}
+          {/* Card tạo ý tưởng mới */}
           <Link
             href="/ideas/new"
             className="group flex min-h-[300px] min-w-0 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-[#111c30]/60 p-8 text-center transition hover:-translate-y-1 hover:border-cyan-400 hover:bg-cyan-400/5"
@@ -718,7 +725,7 @@ export default async function IdeasPage({
         </section>
       )}
 
-      {/* Thống kê */}
+      {/* Thống kê cuối trang */}
       <section className="grid overflow-hidden rounded-2xl border border-slate-800 bg-[#111c30] sm:grid-cols-2 xl:grid-cols-4">
         <div className="border-b border-slate-800 p-5 sm:border-r xl:border-b-0">
           <div className="flex items-center gap-3">
