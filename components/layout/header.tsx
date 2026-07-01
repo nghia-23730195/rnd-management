@@ -2,13 +2,42 @@
 
 import {
   Bell,
+  LogOut,
   Menu,
   Search,
   Settings,
-  UserRound,
 } from "lucide-react";
 
-export function Header() {
+import { logoutAction } from "@/app/(dashboard)/logout-action";
+
+type HeaderProps = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    role: string;
+    active: boolean;
+  };
+};
+
+export function Header({ user }: HeaderProps) {
+  const firstLetter =
+    user.name.trim().charAt(0).toUpperCase() || "U";
+
+  const roleLabel =
+    user.role === "ADMIN"
+      ? "Quản trị viên"
+      : user.role === "RND_MANAGER"
+        ? "Quản lý R&D"
+        : user.role === "PROJECT_MANAGER"
+          ? "Quản lý dự án"
+          : user.role === "REVIEWER"
+            ? "Người đánh giá"
+            : user.role === "VIEWER"
+              ? "Người xem"
+              : "Thành viên";
+
   return (
     <header className="sticky top-0 z-30 flex h-20 min-w-0 items-center justify-between border-b border-slate-800 bg-[#081221]/95 px-4 backdrop-blur md:px-6">
       <div className="flex min-w-0 items-center gap-3">
@@ -59,13 +88,34 @@ export function Header() {
           <Settings className="size-5" />
         </button>
 
-        <button
-          type="button"
-          aria-label="Tài khoản"
-          className="flex size-10 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-slate-300"
+        <div className="hidden min-w-0 text-right lg:block">
+          <p className="max-w-40 truncate text-sm font-semibold text-slate-200">
+            {user.name}
+          </p>
+
+          <p className="max-w-40 truncate text-xs text-slate-500">
+            {roleLabel}
+          </p>
+        </div>
+
+        <div
+          title={`${user.name} - ${user.email}`}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/10 font-bold text-cyan-300"
         >
-          <UserRound className="size-5" />
-        </button>
+          {firstLetter}
+        </div>
+
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            aria-label="Đăng xuất"
+            title="Đăng xuất"
+            className="flex size-10 items-center justify-center rounded-lg border border-slate-800 bg-[#111c30] text-slate-400 transition hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300"
+          >
+            <LogOut className="size-5" />
+            <span className="sr-only">Đăng xuất</span>
+          </button>
+        </form>
       </div>
     </header>
   );

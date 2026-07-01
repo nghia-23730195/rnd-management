@@ -1,43 +1,40 @@
-﻿"use client";
-
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { useRouter } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import {
   FlaskConical,
   LockKeyhole,
   Mail,
 } from "lucide-react";
 
-export default function LoginPage() {
-  const router = useRouter();
+import { getCurrentUser } from "@/lib/auth/user";
+import { loginAction } from "./actions";
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+type LoginPageProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+export default async function LoginPage({
+  searchParams,
+}: LoginPageProps) {
+  const currentUser = await getCurrentUser();
 
-    setIsSubmitting(true);
-    setMessage("");
-
-    // Đây mới là đăng nhập thử nghiệm.
-    // Sau này sẽ thay bằng Auth.js hoặc Supabase Auth.
-    setTimeout(() => {
-      router.push("/dashboard");
-      router.refresh();
-    }, 400);
+  if (currentUser) {
+    redirect("/dashboard");
   }
 
+  const query = await searchParams;
+  const errorMessage = query.error?.trim();
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#07101f] px-4 text-slate-100">
+    <main className="flex min-h-screen items-center justify-center bg-[#07111f] px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
             <FlaskConical className="size-8 text-cyan-400" />
           </div>
 
-          <h1 className="mt-5 text-3xl font-bold">
+          <h1 className="mt-5 text-2xl font-bold text-slate-100">
             SMLab-R&amp;D
           </h1>
 
@@ -46,8 +43,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <section className="rounded-2xl border border-slate-700 bg-[#111c30] p-7 shadow-2xl">
-          <h2 className="text-2xl font-semibold">
+        <section className="rounded-2xl border border-slate-700 bg-[#111c30] p-6 shadow-2xl shadow-black/20 sm:p-8">
+          <h2 className="text-xl font-bold text-slate-100">
             Đăng nhập
           </h2>
 
@@ -55,70 +52,69 @@ export default function LoginPage() {
             Nhập thông tin tài khoản để truy cập hệ thống.
           </p>
 
+          {errorMessage && (
+            <div className="mt-5 rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 text-sm text-red-300">
+              {errorMessage}
+            </div>
+          )}
+
           <form
-            onSubmit={handleSubmit}
+            action={loginAction}
             className="mt-6 space-y-5"
           >
-            <div className="space-y-2">
+            <div>
               <label
                 htmlFor="email"
-                className="text-sm font-medium text-slate-200"
+                className="mb-2 block text-sm font-medium text-slate-200"
               >
                 Email
               </label>
 
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-500" />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  autoComplete="email"
                   required
+                  autoComplete="email"
                   placeholder="admin@smlab.vn"
-                  className="h-11 w-full rounded-lg border border-slate-700 bg-[#091426] pl-11 pr-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="h-11 w-full rounded-xl border border-slate-700 bg-[#0a1527] pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div>
               <label
                 htmlFor="password"
-                className="text-sm font-medium text-slate-200"
+                className="mb-2 block text-sm font-medium text-slate-200"
               >
                 Mật khẩu
               </label>
 
               <div className="relative">
-                <LockKeyhole className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-500" />
+                <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
                 <input
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
                   required
+                  minLength={6}
+                  maxLength={128}
+                  autoComplete="current-password"
                   placeholder="Nhập mật khẩu"
-                  className="h-11 w-full rounded-lg border border-slate-700 bg-[#091426] pl-11 pr-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="h-11 w-full rounded-xl border border-slate-700 bg-[#0a1527] pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10"
                 />
               </div>
             </div>
 
-            {message && (
-              <p className="text-sm text-red-400">
-                {message}
-              </p>
-            )}
-
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-lg bg-cyan-400 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-cyan-400 px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
             >
-              {isSubmitting
-                ? "Đang đăng nhập..."
-                : "Đăng nhập"}
+              Đăng nhập
             </button>
           </form>
 

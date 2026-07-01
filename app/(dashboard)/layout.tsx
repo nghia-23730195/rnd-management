@@ -1,23 +1,22 @@
-import type { ReactNode } from "react";
-
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { requireUser } from "@/lib/auth/user";
 
-type DashboardLayoutProps = Readonly<{
-  children: ReactNode;
-}>;
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
-}: DashboardLayoutProps) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const currentUser = await requireUser();
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#07101f] text-slate-100">
+    <div className="min-h-screen bg-[#07111f] text-slate-100">
       <Sidebar />
 
-      <div className="min-h-screen min-w-0 md:pl-64">
-        <Header />
+      <div className="min-w-0 lg:pl-[250px]">
+        <Header user={currentUser} />
 
-        <main className="min-w-0 p-4 md:p-6 xl:p-8">
+        <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

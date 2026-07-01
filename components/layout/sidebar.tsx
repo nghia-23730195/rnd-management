@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 
-const menuItems = [
+const navigationItems = [
   {
     label: "Tổng quan",
     href: "/dashboard",
@@ -32,7 +32,7 @@ const menuItems = [
   {
     label: "Thử nghiệm",
     href: "/experiments",
-    icon: Beaker,
+    icon: FlaskConical,
   },
   {
     label: "Thư viện Research",
@@ -55,64 +55,55 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-slate-800 bg-[#0d182b] md:flex">
-      <div className="flex h-20 items-center border-b border-slate-800 px-5">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10">
-          <FlaskConical className="size-6 text-cyan-400" />
-        </div>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-800 bg-[#0d192d] md:flex md:flex-col">
+      <div className="flex h-16 items-center border-b border-slate-800 px-5">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3"
+        >
+          <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10">
+            <Beaker className="size-5 text-cyan-400" />
+          </div>
 
-        <div className="ml-3 min-w-0">
-          <h1 className="truncate font-bold tracking-wide text-cyan-100">
-            SMLab-R&amp;D
-          </h1>
+          <div>
+            <p className="font-bold text-slate-100">
+              SMLab-R&amp;D
+            </p>
 
-          <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-500">
-            Robotics &amp;
-            <br />
-            Engineering
-          </p>
-        </div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+              Robotics &amp; Engineering
+            </p>
+          </div>
+        </Link>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {menuItems.map((item) => {
+      <nav className="flex-1 space-y-1 p-3">
+        {navigationItems.map((item) => {
           const Icon = item.icon;
 
-          const active =
-            pathname === item.href ||
-            pathname.startsWith(`${item.href}/`);
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={[
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-                active
-                  ? "bg-cyan-400/10 text-cyan-300 ring-1 ring-inset ring-cyan-400/30"
-                  : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100",
+                "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition",
+                isActive
+                  ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300"
+                  : "border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-100",
               ].join(" ")}
             >
-              <Icon className="size-5 shrink-0" />
-              <span className="truncate">{item.label}</span>
+              <Icon className="size-4" />
+              {item.label}
             </Link>
           );
         })}
       </nav>
-
-      <div className="border-t border-slate-800 p-3">
-        <Link
-          href="/experiments"
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-        >
-          <Beaker className="size-5 shrink-0" />
-          <span>Thử nghiệm mới</span>
-        </Link>
-
-        <p className="mt-4 truncate text-center text-xs text-slate-600">
-          SMLab R&amp;D Management
-        </p>
-      </div>
     </aside>
   );
 }
