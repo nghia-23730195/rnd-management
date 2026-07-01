@@ -22,6 +22,8 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 6;
+
 type IdeasPageProps = {
   searchParams: Promise<{
     q?: string;
@@ -29,6 +31,7 @@ type IdeasPageProps = {
     category?: string;
     priority?: string;
     sort?: string;
+    page?: string;
     created?: string;
   }>;
 };
@@ -39,6 +42,7 @@ type IdeasUrlValues = {
   category?: string;
   priority?: string;
   sort?: string;
+  page?: string;
 };
 
 function normalizeStatus(
@@ -91,6 +95,42 @@ function normalizeSort(value: string | undefined) {
   }
 
   return "updated-desc";
+}
+
+function normalizePage(value: string | undefined) {
+  const parsedPage = Number.parseInt(value ?? "1", 10);
+
+  if (!Number.isFinite(parsedPage) || parsedPage < 1) {
+    return 1;
+  }
+
+  return parsedPage;
+}
+
+function getPaginationItems(
+  currentPage: number,
+  totalPages: number
+) {
+  const pages = new Set<number>();
+
+  pages.add(1);
+  pages.add(totalPages);
+  pages.add(currentPage);
+
+  if (currentPage > 1) {
+    pages.add(currentPage - 1);
+  }
+
+  if (currentPage < totalPages) {
+    pages.add(currentPage + 1);
+  }
+
+  return Array.from(pages)
+    .filter(
+      (page) =>
+        page >= 1 && page <= totalPages
+    )
+    .sort((a, b) => a - b);
 }
 
 function getStatusLabel(status: IdeaStatus) {
@@ -253,6 +293,7 @@ export default async function IdeasPage({
   const selectedPriority = normalizePriority(query.priority);
   const selectedCategory = query.category?.trim() ?? "";
   const selectedSort = normalizeSort(query.sort);
+  const requestedPage = normalizePage(query.page);
 
   const where: Prisma.IdeaWhereInput = {
     ...(keyword
@@ -300,26 +341,15 @@ export default async function IdeasPage({
   };
 
   const [
-    ideas,
+    filteredIdeasCount,
     categories,
     totalIdeas,
     reviewingIdeas,
     feasibleIdeas,
     contributors,
   ] = await Promise.all([
-    prisma.idea.findMany({
+    prisma.idea.count({
       where,
-      include: {
-        category: true,
-        creator: {
-          select: {
-            name: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: getOrderBy(selectedSort),
     }),
 
     prisma.ideaCategory.findMany({
@@ -363,12 +393,50 @@ export default async function IdeasPage({
     }),
   ]);
 
+  const totalPages = Math.max(
+    Math.ceil(filteredIdeasCount / PAGE_SIZE),
+    1
+  );
+
+  const currentPage = Math.min(
+    requestedPage,
+    totalPages
+  );
+
+  const ideas = await prisma.idea.findMany({
+    where,
+
+    include: {
+      category: true,
+
+      creator: {
+        select: {
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
+    },
+
+    orderBy: getOrderBy(selectedSort),
+
+    skip: (currentPage - 1) * PAGE_SIZE,
+
+    take: PAGE_SIZE,
+  });
+
+  const paginationItems = getPaginationItems(
+    currentPage,
+    totalPages
+  );
+
   const currentFilters: IdeasUrlValues = {
     q: keyword,
     status: selectedStatus ?? "",
     category: selectedCategory,
     priority: selectedPriority ?? "",
     sort: selectedSort,
+    page: String(currentPage),
   };
 
   const hasFilters =
@@ -379,8 +447,7 @@ export default async function IdeasPage({
 
   return (
     <div className="mx-auto min-w-0 max-w-[1600px] space-y-6">
-      {/* Tiêu đề */}
-     <section className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      <section className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-medium text-cyan-400">
             Quản lý ý tưởng nghiên cứu
@@ -405,21 +472,24 @@ export default async function IdeasPage({
         </Link>
       </section>
 
-      {/* Thông báo tạo thành công */}
       {query.created === "1" && (
         <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-4 text-sm text-emerald-200">
           Ý tưởng mới đã được tạo thành công.
         </div>
       )}
 
-      {/* Tìm kiếm và bộ lọc */}
       <section className="min-w-0 rounded-2xl border border-slate-800 bg-[#111c30] p-4">
         <form
           action="/ideas"
           method="get"
           className="grid min-w-0 gap-3 md:grid-cols-2 lg:grid-cols-5"
         >
-          {/* Hàng tìm kiếm */}
+          <input
+            type="hidden"
+            name="page"
+            value="1"
+          />
+
           <div className="relative min-w-0 md:col-span-2 lg:col-span-5">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
 
@@ -432,7 +502,6 @@ export default async function IdeasPage({
             />
           </div>
 
-          {/* Trạng thái */}
           <select
             name="status"
             defaultValue={selectedStatus ?? ""}
@@ -458,7 +527,6 @@ export default async function IdeasPage({
             <option value="PAUSED">Tạm dừng</option>
           </select>
 
-          {/* Danh mục */}
           <select
             name="category"
             defaultValue={selectedCategory}
@@ -476,7 +544,6 @@ export default async function IdeasPage({
             ))}
           </select>
 
-          {/* Ưu tiên */}
           <select
             name="priority"
             defaultValue={selectedPriority ?? ""}
@@ -489,7 +556,6 @@ export default async function IdeasPage({
             <option value="URGENT">Khẩn cấp</option>
           </select>
 
-          {/* Sắp xếp */}
           <select
             name="sort"
             defaultValue={selectedSort}
@@ -515,10 +581,9 @@ export default async function IdeasPage({
             </option>
           </select>
 
-          {/* Nút áp dụng */}
           <button
             type="submit"
-           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 lg:col-span-1"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 md:col-span-2 lg:col-span-1"
           >
             <SlidersHorizontal className="size-4" />
             Áp dụng
@@ -530,7 +595,7 @@ export default async function IdeasPage({
             <p className="text-sm text-slate-400">
               Tìm thấy{" "}
               <span className="font-semibold text-slate-100">
-                {ideas.length}
+                {filteredIdeasCount}
               </span>{" "}
               ý tưởng phù hợp.
             </p>
@@ -546,11 +611,11 @@ export default async function IdeasPage({
         )}
       </section>
 
-      {/* Danh mục nhanh */}
-      <section className="flex min-w-0 gap-2 overflow-x-auto rounded-2xl border border-slate-800 bg-[#111c30] p-3">
+      <section className="flex min-w-0 flex-wrap gap-2 rounded-2xl border border-slate-800 bg-[#111c30] p-3">
         <Link
           href={buildIdeasUrl(currentFilters, {
             category: "",
+            page: "1",
           })}
           className={[
             "shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition",
@@ -571,6 +636,7 @@ export default async function IdeasPage({
               key={category.id}
               href={buildIdeasUrl(currentFilters, {
                 category: category.id,
+                page: "1",
               })}
               className={[
                 "shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition",
@@ -585,7 +651,6 @@ export default async function IdeasPage({
         })}
       </section>
 
-      {/* Không có kết quả */}
       {ideas.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-slate-700 bg-[#111c30] px-6 py-16 text-center">
           <Search className="mx-auto size-10 text-slate-600" />
@@ -606,7 +671,6 @@ export default async function IdeasPage({
           </Link>
         </section>
       ) : (
-        /* Danh sách ý tưởng */
         <section className="grid min-w-0 gap-5 md:grid-cols-2 2xl:grid-cols-3">
           {ideas.map((idea) => (
             <article
@@ -699,7 +763,6 @@ export default async function IdeasPage({
             </article>
           ))}
 
-          {/* Card tạo ý tưởng mới */}
           <Link
             href="/ideas/new"
             className="group flex min-h-[300px] min-w-0 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-[#111c30]/60 p-8 text-center transition hover:-translate-y-1 hover:border-cyan-400 hover:bg-cyan-400/5"
@@ -725,7 +788,105 @@ export default async function IdeasPage({
         </section>
       )}
 
-      {/* Thống kê cuối trang */}
+      {filteredIdeasCount > 0 && (
+        <section className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-[#111c30] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-500">
+            Hiển thị{" "}
+            <span className="font-medium text-slate-300">
+              {(currentPage - 1) * PAGE_SIZE + 1}
+            </span>
+            {" - "}
+            <span className="font-medium text-slate-300">
+              {Math.min(
+                currentPage * PAGE_SIZE,
+                filteredIdeasCount
+              )}
+            </span>
+            {" trong "}
+            <span className="font-medium text-slate-300">
+              {filteredIdeasCount}
+            </span>{" "}
+            ý tưởng
+          </p>
+
+          <nav
+            aria-label="Phân trang Kho ý tưởng"
+            className="flex flex-wrap items-center gap-2"
+          >
+            {currentPage > 1 ? (
+              <Link
+                href={buildIdeasUrl(currentFilters, {
+                  page: String(currentPage - 1),
+                })}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-700 px-3 text-sm font-medium text-slate-300 transition hover:border-cyan-400/40 hover:bg-slate-800 hover:text-cyan-300"
+              >
+                Trước
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-slate-800 px-3 text-sm text-slate-600">
+                Trước
+              </span>
+            )}
+
+            {paginationItems.map((page, index) => {
+              const previousPage =
+                paginationItems[index - 1];
+
+              const showEllipsis =
+                previousPage !== undefined &&
+                page - previousPage > 1;
+
+              return (
+                <div
+                  key={page}
+                  className="flex items-center gap-2"
+                >
+                  {showEllipsis && (
+                    <span className="px-1 text-sm text-slate-600">
+                      ...
+                    </span>
+                  )}
+
+                  <Link
+                    href={buildIdeasUrl(currentFilters, {
+                      page: String(page),
+                    })}
+                    aria-current={
+                      page === currentPage
+                        ? "page"
+                        : undefined
+                    }
+                    className={[
+                      "inline-flex size-9 items-center justify-center rounded-lg border text-sm font-semibold transition",
+                      page === currentPage
+                        ? "border-cyan-400 bg-cyan-400 text-slate-950"
+                        : "border-slate-700 text-slate-400 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-cyan-300",
+                    ].join(" ")}
+                  >
+                    {page}
+                  </Link>
+                </div>
+              );
+            })}
+
+            {currentPage < totalPages ? (
+              <Link
+                href={buildIdeasUrl(currentFilters, {
+                  page: String(currentPage + 1),
+                })}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-700 px-3 text-sm font-medium text-slate-300 transition hover:border-cyan-400/40 hover:bg-slate-800 hover:text-cyan-300"
+              >
+                Sau
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-lg border border-slate-800 px-3 text-sm text-slate-600">
+                Sau
+              </span>
+            )}
+          </nav>
+        </section>
+      )}
+
       <section className="grid overflow-hidden rounded-2xl border border-slate-800 bg-[#111c30] sm:grid-cols-2 lg:grid-cols-4">
         <div className="border-b border-slate-800 p-5 sm:border-r lg:border-b-0">
           <div className="flex items-center gap-3">
@@ -743,7 +904,7 @@ export default async function IdeasPage({
           </div>
         </div>
 
-        <div className="border-b border-slate-800 p-5 xl:border-b-0 lg:border-r">
+        <div className="border-b border-slate-800 p-5 lg:border-b-0 lg:border-r">
           <div className="flex items-center gap-3">
             <Clock3 className="size-5 text-amber-300" />
 
