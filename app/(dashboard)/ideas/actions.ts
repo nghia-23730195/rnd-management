@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { requireUser } from "@/lib/auth/user";
 import {
   IdeaPriority,
   IdeaStatus,
@@ -107,6 +108,26 @@ function normalizePriority(
   return IdeaPriority.MEDIUM;
 }
 
+function normalizeStatus(
+  value: FormDataEntryValue | null
+): IdeaStatus {
+  if (
+    value === IdeaStatus.DRAFT ||
+    value === IdeaStatus.PENDING ||
+    value === IdeaStatus.REVIEWING ||
+    value === IdeaStatus.NEEDS_REVISION ||
+    value === IdeaStatus.FEASIBLE ||
+    value === IdeaStatus.NOT_FEASIBLE ||
+    value === IdeaStatus.APPROVED ||
+    value === IdeaStatus.CONVERTED_TO_PROJECT ||
+    value === IdeaStatus.PAUSED
+  ) {
+    return value;
+  }
+
+  throw new Error("Trạng thái ý tưởng không hợp lệ.");
+}
+
 async function generateIdeaCode() {
   const currentYear = new Date().getFullYear();
 
@@ -142,28 +163,9 @@ async function generateIdeaCode() {
   }
 }
 
-function normalizeStatus(
-  value: FormDataEntryValue | null
-): IdeaStatus {
-  if (
-    value === IdeaStatus.DRAFT ||
-    value === IdeaStatus.PENDING ||
-    value === IdeaStatus.REVIEWING ||
-    value === IdeaStatus.NEEDS_REVISION ||
-    value === IdeaStatus.FEASIBLE ||
-    value === IdeaStatus.NOT_FEASIBLE ||
-    value === IdeaStatus.APPROVED ||
-    value === IdeaStatus.CONVERTED_TO_PROJECT ||
-    value === IdeaStatus.PAUSED
-  ) {
-    return value;
-  }
-
-  throw new Error("Trạng thái ý tưởng không hợp lệ.");
-}
-
-
 export async function createIdea(formData: FormData) {
+  const currentUser = await requireUser();
+
   const title = getRequiredText(
     formData,
     "title",
@@ -221,34 +223,15 @@ export async function createIdea(formData: FormData) {
     "estimatedBudget"
   );
 
-  const [creator, category] = await Promise.all([
-    prisma.user.findFirst({
-      where: {
-        active: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-      select: {
-        id: true,
-      },
-    }),
-
-    prisma.ideaCategory.findUnique({
+  const category =
+    await prisma.ideaCategory.findUnique({
       where: {
         id: categoryId,
       },
       select: {
         id: true,
       },
-    }),
-  ]);
-
-  if (!creator) {
-    throw new Error(
-      "Không tìm thấy người dùng để tạo ý tưởng. Hãy chạy seed dữ liệu."
-    );
-  }
+    });
 
   if (!category) {
     throw new Error(
@@ -272,7 +255,7 @@ export async function createIdea(formData: FormData) {
       estimatedBudget,
       priority,
       status: IdeaStatus.DRAFT,
-      creatorId: creator.id,
+      creatorId: currentUser.id,
       categoryId: category.id,
     },
   });
@@ -287,6 +270,8 @@ export async function updateIdea(
   ideaId: string,
   formData: FormData
 ) {
+  const currentUser = await requireUser();
+
   const title = getRequiredText(
     formData,
     "title",
@@ -350,11 +335,23 @@ export async function updateIdea(
     },
     select: {
       id: true,
+      creatorId: true,
     },
   });
 
   if (!existingIdea) {
     throw new Error("Không tìm thấy ý tưởng.");
+  }
+
+  const canEdit =
+    currentUser.role === "ADMIN" ||
+    currentUser.role === "RND_MANAGER" ||
+    existingIdea.creatorId === currentUser.id;
+
+  if (!canEdit) {
+    throw new Error(
+      "Bạn không có quyền chỉnh sửa ý tưởng này."
+    );
   }
 
   const category =
@@ -404,6 +401,18 @@ export async function updateIdeaStatus(
   ideaId: string,
   formData: FormData
 ) {
+  const currentUser = await requireUser();
+
+  const canUpdateStatus =
+    currentUser.role === "ADMIN" ||
+    currentUser.role === "RND_MANAGER";
+
+  if (!canUpdateStatus) {
+    throw new Error(
+      "Bạn không có quyền cập nhật trạng thái ý tưởng."
+    );
+  }
+
   const status = normalizeStatus(
     formData.get("status")
   );
